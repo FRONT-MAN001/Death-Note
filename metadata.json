@@ -1,0 +1,6 @@
+{
+  "name": "[Death Note]",
+  "description": "Infinite canvas drawing and sketching application with a translucent frosted-glass control interface, vector strokes, custom .idraw project files, and PDF export.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
