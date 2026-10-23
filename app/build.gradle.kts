@@ -1,4 +1,5 @@
 import com.google.gms.googleservices.GoogleServicesPlugin.MissingGoogleServicesStrategy
+import java.util.Base64
 
 plugins {
   alias(libs.plugins.android.application)
@@ -27,28 +28,55 @@ android {
   signingConfigs {
     create("release") {
       // Support CI/CD release signing credentials from environment variables with local testing fallback
-      val customKeystorePath = System.getenv("KEYSTORE_PATH")
-        ?: System.getenv("SIGNING_KEY")?.takeIf { file(it).exists() }
+      val customKeystorePath = System.getenv("KEYSTORE_PATH")?.takeIf { it.isNotBlank() }
+        ?: System.getenv("SIGNING_KEY")?.takeIf { it.isNotBlank() && file(it).exists() }
         ?: "${rootDir}/my-upload-key.jks"
-      val releaseKeystore = file(customKeystorePath)
-      val hasReleaseCredentials = System.getenv("KEY_STORE_PASSWORD") != null || System.getenv("STORE_PASSWORD") != null
 
-      if (releaseKeystore.exists() && hasReleaseCredentials) {
+      val releaseKeystore = if (customKeystorePath.isNotBlank()) file(customKeystorePath) else null
+      val envStorePassword = (System.getenv("KEY_STORE_PASSWORD") ?: System.getenv("STORE_PASSWORD"))?.takeIf { it.isNotBlank() }
+      val envAlias = System.getenv("ALIAS")?.takeIf { it.isNotBlank() }
+      val envKeyPassword = System.getenv("KEY_PASSWORD")?.takeIf { it.isNotBlank() }
+
+      val debugKeystore = file("${rootDir}/debug.keystore")
+      if (!debugKeystore.exists()) {
+        val base64File = file("${rootDir}/debug.keystore.base64")
+        if (base64File.exists()) {
+          try {
+            val decoded = Base64.getDecoder().decode(base64File.readText().trim())
+            debugKeystore.writeBytes(decoded)
+          } catch (_: Exception) {}
+        }
+      }
+
+      val hasCustomKeystore = releaseKeystore != null && releaseKeystore.exists() && releaseKeystore.isFile
+      val hasCredentials = envStorePassword != null && envAlias != null && envKeyPassword != null
+
+      if (hasCustomKeystore && hasCredentials) {
         storeFile = releaseKeystore
-        storePassword = System.getenv("KEY_STORE_PASSWORD") ?: System.getenv("STORE_PASSWORD")
-        keyAlias = System.getenv("ALIAS") ?: "upload"
-        keyPassword = System.getenv("KEY_PASSWORD") ?: storePassword
+        storePassword = envStorePassword
+        keyAlias = envAlias
+        keyPassword = envKeyPassword
       } else {
-        // Fallback for local development and testing when CI signing secrets are not present
-        val debugKeystore = file("${rootDir}/debug.keystore")
-        storeFile = if (releaseKeystore.exists()) releaseKeystore else debugKeystore
-        storePassword = System.getenv("KEY_STORE_PASSWORD") ?: System.getenv("STORE_PASSWORD") ?: "android"
-        keyAlias = System.getenv("ALIAS") ?: if (storeFile == debugKeystore) "androiddebugkey" else "upload"
-        keyPassword = System.getenv("KEY_PASSWORD") ?: "android"
+        // Fallback for local development and CI testing when production signing secrets are not present
+        val fallbackKeystore = if (hasCustomKeystore) releaseKeystore else debugKeystore
+        storeFile = fallbackKeystore
+        storePassword = envStorePassword ?: "android"
+        keyAlias = envAlias ?: if (fallbackKeystore == debugKeystore) "androiddebugkey" else "upload"
+        keyPassword = envKeyPassword ?: "android"
       }
     }
     create("debugConfig") {
-      storeFile = file("${rootDir}/debug.keystore")
+      val debugKeystore = file("${rootDir}/debug.keystore")
+      if (!debugKeystore.exists()) {
+        val base64File = file("${rootDir}/debug.keystore.base64")
+        if (base64File.exists()) {
+          try {
+            val decoded = Base64.getDecoder().decode(base64File.readText().trim())
+            debugKeystore.writeBytes(decoded)
+          } catch (_: Exception) {}
+        }
+      }
+      storeFile = debugKeystore
       storePassword = "android"
       keyAlias = "androiddebugkey"
       keyPassword = "android"

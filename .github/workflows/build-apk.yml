@@ -34,10 +34,21 @@ jobs:
         run: |
           KEYSTORE_FILE="${{ runner.temp }}/release.keystore"
           if [ -n "$SIGNING_KEY" ]; then
+            echo "==> Decoding production SIGNING_KEY from GitHub Secrets..."
             echo "$SIGNING_KEY" | base64 --decode > "$KEYSTORE_FILE"
             export KEYSTORE_PATH="$KEYSTORE_FILE"
           else
-            echo "Warning: SIGNING_KEY secret is not set. Falling back to local/debug signing fallback."
+            echo "==> Notice: SIGNING_KEY secret is not set in GitHub Repository Secrets."
+            echo "==> Initializing fallback signing keystore for continuous integration build..."
+            if [ -f "debug.keystore.base64" ]; then
+              base64 --decode debug.keystore.base64 > "$KEYSTORE_FILE"
+            else
+              keytool -genkeypair -v -keystore "$KEYSTORE_FILE" -alias androiddebugkey -keypass android -storepass android -dname "CN=Android Debug,O=Android,C=US" -keyalg RSA -keysize 2048 -validity 10000
+            fi
+            export KEYSTORE_PATH="$KEYSTORE_FILE"
+            export KEY_STORE_PASSWORD="android"
+            export ALIAS="androiddebugkey"
+            export KEY_PASSWORD="android"
           fi
           ./gradlew assembleRelease
 
