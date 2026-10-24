@@ -184,7 +184,16 @@ fun InfiniteCanvas(
                                             activeShapeEnd = canvasPos
                                         }
                                         ActiveTool.SELECT -> {
-                                            if (currentSelectedShape == null && currentSelectedImage == null) {
+                                            val hitCurImg = currentSelectedImage?.let { img ->
+                                                val b = img.bounds()
+                                                canvasPos.x in b.left..b.right && canvasPos.y in b.top..b.bottom
+                                            } ?: false
+                                            val hitCurShape = currentSelectedShape?.let { shp ->
+                                                val b = shp.bounds()
+                                                canvasPos.x in b.left..b.right && canvasPos.y in b.top..b.bottom
+                                            } ?: false
+
+                                            if (!hitCurImg && !hitCurShape) {
                                                 currentOnObjectSelect(canvasPos)
                                             }
                                         }
@@ -205,11 +214,13 @@ fun InfiniteCanvas(
                                             activeShapeEnd = canvasPos
                                         }
                                         ActiveTool.SELECT -> {
-                                            val prevScreen = pointer.previousPosition
-                                            val prevCanvas = currentTransform.screenToCanvas(prevScreen.x, prevScreen.y)
-                                            val dx = canvasPos.x - prevCanvas.x
-                                            val dy = canvasPos.y - prevCanvas.y
-                                            currentOnSelectedMove(dx, dy)
+                                            if (currentSelectedShape != null || currentSelectedImage != null) {
+                                                val prevScreen = pointer.previousPosition
+                                                val prevCanvas = currentTransform.screenToCanvas(prevScreen.x, prevScreen.y)
+                                                val dx = canvasPos.x - prevCanvas.x
+                                                val dy = canvasPos.y - prevCanvas.y
+                                                currentOnSelectedMove(dx, dy)
+                                            }
                                         }
                                         ActiveTool.PAN -> {
                                             val panDelta = pointer.position - pointer.previousPosition

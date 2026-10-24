@@ -133,18 +133,18 @@ fun FileDrawer(
                         Text(
                             text = "Infinite Draw",
                             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                            color = Color(0xFF0F172A)
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
                             text = "Native 2D Canvas Studio",
                             fontSize = 11.sp,
-                            color = Color(0xFF64748B)
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
 
                 IconButton(onClick = onCloseDrawer, modifier = Modifier.size(32.dp)) {
-                    Icon(Icons.Default.Close, contentDescription = "Close Drawer", tint = Color(0xFF64748B))
+                    Icon(Icons.Default.Close, contentDescription = "Close Drawer", tint = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
 
@@ -194,14 +194,14 @@ fun FileDrawer(
                                     Text(
                                         text = activeFolderName,
                                         style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
-                                        color = Color(0xFF0F172A),
+                                        color = MaterialTheme.colorScheme.onSurface,
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis
                                     )
                                     Text(
                                         text = "${projectFiles.size} .idraw projects",
                                         fontSize = 11.sp,
-                                        color = Color(0xFF64748B)
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                 }
                             }
@@ -359,7 +359,7 @@ fun FileDrawer(
                                     text = bg.displayName,
                                     fontSize = 13.sp,
                                     fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                                    color = Color(0xFF1E293B)
+                                    color = MaterialTheme.colorScheme.onSurface
                                 )
                             }
                             if (isSelected) {
@@ -409,7 +409,7 @@ private fun DrawerActionRow(
         Icon(
             imageVector = icon,
             contentDescription = label,
-            tint = Color(0xFF475569),
+            tint = Color(0xFF38BDF8),
             modifier = Modifier.size(20.dp)
         )
         Spacer(modifier = Modifier.width(12.dp))
@@ -417,7 +417,7 @@ private fun DrawerActionRow(
             text = label,
             fontSize = 13.sp,
             fontWeight = FontWeight.Medium,
-            color = Color(0xFF1E293B)
+            color = MaterialTheme.colorScheme.onSurface
         )
     }
 }
@@ -489,14 +489,14 @@ private fun ProjectFileItem(
                         Text(
                             text = meta.name,
                             style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
-                            color = Color(0xFF0F172A),
+                            color = MaterialTheme.colorScheme.onSurface,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
                         Text(
                             text = ".idraw",
                             fontSize = 11.sp,
-                            color = Color(0xFF0284C7),
+                            color = Color(0xFF38BDF8),
                             fontWeight = FontWeight.SemiBold
                         )
                     }
@@ -506,7 +506,7 @@ private fun ProjectFileItem(
                     Text(
                         text = "$dateStr · ${sizeKb} KB",
                         fontSize = 10.sp,
-                        color = Color(0xFF64748B)
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }

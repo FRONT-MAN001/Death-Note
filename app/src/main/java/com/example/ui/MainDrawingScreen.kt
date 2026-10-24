@@ -61,6 +61,7 @@ import com.example.ui.dialogs.DeleteConfirmDialog
 import com.example.ui.dialogs.FileInfoDialog
 import com.example.ui.dialogs.HelpDialog
 import com.example.ui.dialogs.HexColorInputDialog
+import com.example.ui.dialogs.ImageManagerDialog
 import com.example.ui.dialogs.PdfExportDialog
 import com.example.ui.dialogs.RenameDialog
 import com.example.ui.dialogs.SaveAsDialog
@@ -108,6 +109,7 @@ fun MainDrawingScreen(
     var showColorPopover by remember { mutableStateOf(false) }
     var showShapePopover by remember { mutableStateOf(false) }
     var showHexDialog by remember { mutableStateOf(false) }
+    var showImageManagerDialog by remember { mutableStateOf(false) }
 
     // Dialog visibilities
     val showSaveAsDialog by viewModel.showSaveAsDialog.collectAsState()
@@ -366,7 +368,16 @@ fun MainDrawingScreen(
                     onRotateCcw = { viewModel.rotateSelected(-15f) },
                     onDuplicate = { viewModel.duplicateSelected() },
                     onDelete = { viewModel.deleteSelected() },
-                    onDeselect = { viewModel.clearSelection() }
+                    onDeselect = { viewModel.clearSelection() },
+                    onMoveUp = { viewModel.moveSelected(0f, -25f) },
+                    onMoveDown = { viewModel.moveSelected(0f, 25f) },
+                    onMoveLeft = { viewModel.moveSelected(-25f, 0f) },
+                    onMoveRight = { viewModel.moveSelected(25f, 0f) },
+                    selectedImageIndex = project.images.indexOfFirst { it.id == selectedImage?.id },
+                    totalImages = project.images.size,
+                    onNextImage = { viewModel.selectNextImage() },
+                    onPrevImage = { viewModel.selectPreviousImage() },
+                    onOpenImageManager = { showImageManagerDialog = true }
                 )
             }
 
@@ -483,9 +494,13 @@ fun MainDrawingScreen(
                     showBrushPopover = false
                     showColorPopover = false
                     showShapePopover = false
-                    imagePickerLauncher.launch(
-                        PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
-                    )
+                    if (project.images.isNotEmpty()) {
+                        showImageManagerDialog = true
+                    } else {
+                        imagePickerLauncher.launch(
+                            PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                        )
+                    }
                 },
                 onUndoClick = { viewModel.undo() },
                 onRedoClick = { viewModel.redo() },
@@ -571,5 +586,22 @@ fun MainDrawingScreen(
 
     if (showHelpDialog) {
         HelpDialog(onDismiss = { viewModel.showHelpDialog.value = false })
+    }
+
+    if (showImageManagerDialog) {
+        ImageManagerDialog(
+            images = project.images,
+            selectedImageId = selectedImage?.id,
+            onSelectImage = { viewModel.focusOnImage(it) },
+            onMoveLayerUp = { viewModel.moveImageLayerUp(it) },
+            onMoveLayerDown = { viewModel.moveImageLayerDown(it) },
+            onDeleteImage = { viewModel.deleteImage(it) },
+            onImportNewImage = {
+                imagePickerLauncher.launch(
+                    PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                )
+            },
+            onDismiss = { showImageManagerDialog = false }
+        )
     }
 }

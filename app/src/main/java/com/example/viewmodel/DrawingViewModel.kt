@@ -327,7 +327,25 @@ class DrawingViewModel(application: Application) : AndroidViewModel(application)
 
     // Selection
     fun selectObjectAt(canvasPoint: Offset) {
-        // Hit test shapes first
+        // Hit test images first (with cycling if multiple images overlap)
+        val matchingImages = _project.value.images.reversed().filter { img ->
+            val b = img.bounds()
+            canvasPoint.x in b.left..b.right && canvasPoint.y in b.top..b.bottom
+        }
+        if (matchingImages.isNotEmpty()) {
+            val cur = _selectedImage.value
+            val target = if (cur != null && matchingImages.any { it.id == cur.id }) {
+                val idx = matchingImages.indexOfFirst { it.id == cur.id }
+                matchingImages[(idx + 1) % matchingImages.size]
+            } else {
+                matchingImages.first()
+            }
+            _selectedImage.value = target
+            _selectedShape.value = null
+            return
+        }
+
+        // Hit test shapes next
         val hitShape = DrawingEngine.hitTestShape(_project.value.shapes, canvasPoint)
         if (hitShape != null) {
             _selectedShape.value = hitShape
@@ -335,16 +353,87 @@ class DrawingViewModel(application: Application) : AndroidViewModel(application)
             return
         }
 
-        // Hit test images next
-        val hitImg = DrawingEngine.hitTestImage(_project.value.images, canvasPoint)
-        if (hitImg != null) {
-            _selectedImage.value = hitImg
-            _selectedShape.value = null
-            return
-        }
-
         // None hit
         clearSelection()
+    }
+
+    fun selectImage(image: ImageObject) {
+        _selectedImage.value = image
+        _selectedShape.value = null
+    }
+
+    fun selectImageById(id: String) {
+        val img = _project.value.images.firstOrNull { it.id == id }
+        if (img != null) {
+            selectImage(img)
+        }
+    }
+
+    fun focusOnImage(image: ImageObject) {
+        selectImage(image)
+        val cx = image.x + image.width / 2f
+        val cy = image.y + image.height / 2f
+        val curZoom = _transform.value.zoom
+        _transform.value = _transform.value.copy(
+            panX = 540f - cx * curZoom,
+            panY = 960f - cy * curZoom
+        )
+    }
+
+    fun selectNextImage() {
+        val list = _project.value.images
+        if (list.isEmpty()) return
+        val cur = _selectedImage.value
+        val nextIdx = if (cur == null) 0 else (list.indexOfFirst { it.id == cur.id } + 1) % list.size
+        val nextImg = list[nextIdx]
+        focusOnImage(nextImg)
+    }
+
+    fun selectPreviousImage() {
+        val list = _project.value.images
+        if (list.isEmpty()) return
+        val cur = _selectedImage.value
+        val curIdx = if (cur == null) 0 else list.indexOfFirst { it.id == cur.id }
+        val prevIdx = if (curIdx <= 0) list.size - 1 else curIdx - 1
+        val prevImg = list[prevIdx]
+        focusOnImage(prevImg)
+    }
+
+    fun moveImageLayerUp(image: ImageObject) {
+        val list = _project.value.images.toMutableList()
+        val idx = list.indexOfFirst { it.id == image.id }
+        if (idx in 0 until list.size - 1) {
+            val item = list.removeAt(idx)
+            list.add(idx + 1, item)
+            _project.value = _project.value.copy(images = list)
+            markChanged()
+            toastMessage.value = "Image brought forward"
+        }
+    }
+
+    fun moveImageLayerDown(image: ImageObject) {
+        val list = _project.value.images.toMutableList()
+        val idx = list.indexOfFirst { it.id == image.id }
+        if (idx > 0) {
+            val item = list.removeAt(idx)
+            list.add(idx - 1, item)
+            _project.value = _project.value.copy(images = list)
+            markChanged()
+            toastMessage.value = "Image sent backward"
+        }
+    }
+
+    fun deleteImage(image: ImageObject) {
+        val newImages = _project.value.images.filterNot { it.id == image.id }
+        _project.value = _project.value.copy(images = newImages)
+        undoStack.add(DrawCommand.DeleteObjects(emptyList(), emptyList(), listOf(image)))
+        redoStack.clear()
+        updateUndoRedoStates()
+        if (_selectedImage.value?.id == image.id) {
+            _selectedImage.value = null
+        }
+        markChanged()
+        toastMessage.value = "Deleted image"
     }
 
     fun clearSelection() {
