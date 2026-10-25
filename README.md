@@ -1,4 +1,4 @@
-# [Death Note] - Android Application
+# Death Note - Android Application
 
 A sleek, responsive Android application built with modern **Jetpack Compose**, **Material Design 3**, and an expansive multi-directional infinite writing canvas. The app features adaptive launcher icons, dynamic UI themes, and an automated continuous delivery pipeline for signed release APK generation.
 

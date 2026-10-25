@@ -22,6 +22,6 @@ dependencyResolutionManagement {
   }
 }
 
-rootProject.name = "[Death Note]"
+rootProject.name = "Death Note"
 
 include(":app")

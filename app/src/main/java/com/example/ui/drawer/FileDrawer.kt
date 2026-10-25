@@ -11,7 +11,11 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
+import com.example.R
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -26,19 +30,16 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.DriveFileRenameOutline
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.HelpOutline
-import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PictureAsPdf
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.Share
-import androidx.compose.material.icons.filled.Wallpaper
-import androidx.compose.material3.Divider
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
@@ -56,7 +57,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
@@ -71,17 +71,17 @@ import java.util.Locale
 
 @Composable
 fun FileDrawer(
+    currentProjectName: String,
     activeFolderName: String,
     projectFiles: List<ProjectMetadata>,
-    currentProjectName: String,
     currentBackground: CanvasBackground,
-    onBrowseFolderClick: () -> Unit,
     onNewDrawingClick: () -> Unit,
+    onBrowseFolderClick: () -> Unit,
     onOpenFilePickerClick: () -> Unit,
+    onOpenProject: (Uri) -> Unit,
     onSaveClick: () -> Unit,
     onSaveAsClick: () -> Unit,
     onExportPdfClick: () -> Unit,
-    onOpenProject: (Uri) -> Unit,
     onRenameClick: (ProjectMetadata) -> Unit,
     onDeleteClick: (ProjectMetadata) -> Unit,
     onShareProjectClick: (ProjectMetadata) -> Unit,
@@ -97,7 +97,7 @@ fun FileDrawer(
             .fillMaxHeight()
             .width(340.dp)
             .testTag("file_navigation_drawer"),
-        color = Color(0xFFF8FAFC),
+        color = MaterialTheme.colorScheme.surface,
         tonalElevation = 6.dp
     ) {
         Column(
@@ -116,27 +116,28 @@ fun FileDrawer(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Box(
                         modifier = Modifier
-                            .size(36.dp)
+                            .size(42.dp)
                             .clip(RoundedCornerShape(10.dp))
-                            .background(Color(0xFF0F172A)),
+                            .background(Color(0xFF08090E))
+                            .border(1.5.dp, Color(0xFF38BDF8).copy(alpha = 0.6f), RoundedCornerShape(10.dp)),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(
-                            text = "∞",
-                            color = Color(0xFF38BDF8),
-                            fontSize = 24.sp,
-                            fontWeight = FontWeight.Bold
+                        Image(
+                            painter = painterResource(id = R.drawable.jadu),
+                            contentDescription = "Death Note Icon",
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.fillMaxSize()
                         )
                     }
-                    Spacer(modifier = Modifier.width(10.dp))
+                    Spacer(modifier = Modifier.width(12.dp))
                     Column {
                         Text(
-                            text = "Infinite Draw",
+                            text = "Death Note",
                             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
-                            text = "Native 2D Canvas Studio",
+                            text = "Infinite Canvas Studio",
                             fontSize = 11.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -144,11 +145,15 @@ fun FileDrawer(
                 }
 
                 IconButton(onClick = onCloseDrawer, modifier = Modifier.size(32.dp)) {
-                    Icon(Icons.Default.Close, contentDescription = "Close Drawer", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Icon(
+                        Icons.Default.Close,
+                        contentDescription = "Close Drawer",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
             }
 
-            HorizontalDivider(color = Color(0xFFE2E8F0))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
 
             LazyColumn(
                 modifier = Modifier
@@ -156,13 +161,13 @@ fun FileDrawer(
                     .fillMaxWidth()
                     .padding(horizontal = 14.dp, vertical = 8.dp)
             ) {
-                // Section: Active Folder
+                // Section: Storage Folder
                 item {
                     Text(
-                        text = "WORKING FOLDER",
+                        text = "STORAGE LOCATION",
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color(0xFF94A3B8),
+                        color = Color(0xFF38BDF8),
                         modifier = Modifier.padding(vertical = 6.dp)
                     )
 
@@ -170,8 +175,12 @@ fun FileDrawer(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(14.dp))
-                            .background(Color.White)
-                            .border(1.dp, Color(0xFFE2E8F0), RoundedCornerShape(14.dp))
+                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                            .border(
+                                1.dp,
+                                MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+                                RoundedCornerShape(14.dp)
+                            )
                             .padding(12.dp)
                     ) {
                         Row(
@@ -186,40 +195,35 @@ fun FileDrawer(
                                 Icon(
                                     imageVector = Icons.Default.Folder,
                                     contentDescription = "Folder",
-                                    tint = Color(0xFF0284C7),
+                                    tint = Color(0xFF38BDF8),
                                     modifier = Modifier.size(24.dp)
                                 )
                                 Spacer(modifier = Modifier.width(10.dp))
                                 Column {
                                     Text(
-                                        text = activeFolderName,
+                                        text = "Internal Storage / Drawings",
                                         style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
                                         color = MaterialTheme.colorScheme.onSurface,
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis
                                     )
                                     Text(
-                                        text = "${projectFiles.size} .idraw projects",
+                                        text = "${projectFiles.size} .idraw projects • Device storage",
                                         fontSize = 11.sp,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                 }
                             }
 
-                            Box(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(8.dp))
-                                    .background(Color(0xFFF1F5F9))
-                                    .clickable(onClick = onBrowseFolderClick)
-                                    .padding(horizontal = 8.dp, vertical = 6.dp)
-                                    .testTag("browse_folder_button"),
-                                contentAlignment = Alignment.Center
+                            IconButton(
+                                onClick = onBrowseFolderClick,
+                                modifier = Modifier.size(32.dp)
                             ) {
-                                Text(
-                                    text = "Browse",
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = Color(0xFF0284C7)
+                                Icon(
+                                    Icons.Default.Refresh,
+                                    contentDescription = "Refresh",
+                                    tint = Color(0xFF38BDF8),
+                                    modifier = Modifier.size(20.dp)
                                 )
                             }
                         }
@@ -228,43 +232,48 @@ fun FileDrawer(
                     Spacer(modifier = Modifier.height(14.dp))
                 }
 
-                // Section: Primary File Actions
+                // Section: Project Actions
                 item {
                     Text(
                         text = "PROJECT ACTIONS",
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color(0xFF94A3B8),
+                        color = Color(0xFF38BDF8),
                         modifier = Modifier.padding(vertical = 6.dp)
                     )
 
                     DrawerActionRow(
                         icon = Icons.Default.Add,
                         label = "New Drawing",
+                        iconTint = Color(0xFF10B981),
                         onClick = onNewDrawingClick,
                         testTag = "drawer_action_new"
                     )
                     DrawerActionRow(
                         icon = Icons.Default.FolderOpen,
                         label = "Open Project...",
+                        iconTint = Color(0xFF0284C7),
                         onClick = onOpenFilePickerClick,
                         testTag = "drawer_action_open"
                     )
                     DrawerActionRow(
                         icon = Icons.Default.Save,
                         label = "Save Drawing",
+                        iconTint = Color(0xFF3B82F6),
                         onClick = onSaveClick,
                         testTag = "drawer_action_save"
                     )
                     DrawerActionRow(
                         icon = Icons.Default.Save,
                         label = "Save As...",
+                        iconTint = Color(0xFF8B5CF6),
                         onClick = onSaveAsClick,
                         testTag = "drawer_action_save_as"
                     )
                     DrawerActionRow(
                         icon = Icons.Default.PictureAsPdf,
                         label = "Export PDF...",
+                        iconTint = Color(0xFFEF4444),
                         onClick = onExportPdfClick,
                         testTag = "drawer_action_export_pdf"
                     )
@@ -285,7 +294,7 @@ fun FileDrawer(
                             text = "PROJECTS (.IDRAW)",
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
-                            color = Color(0xFF94A3B8)
+                            color = Color(0xFF38BDF8)
                         )
                     }
                 }
@@ -296,14 +305,19 @@ fun FileDrawer(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clip(RoundedCornerShape(12.dp))
-                                .background(Color.White)
+                                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
+                                .border(
+                                    1.dp,
+                                    MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f),
+                                    RoundedCornerShape(12.dp)
+                                )
                                 .padding(18.dp),
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
-                                text = "No .idraw project files found in this folder. Save your drawing to see it here!",
+                                text = "No .idraw project files found in internal storage. Save your drawing to see it here!",
                                 fontSize = 12.sp,
-                                color = Color(0xFF94A3B8),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 lineHeight = 16.sp
                             )
                         }
@@ -330,45 +344,61 @@ fun FileDrawer(
                         text = "CANVAS BACKGROUND",
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color(0xFF94A3B8),
+                        color = Color(0xFF38BDF8),
                         modifier = Modifier.padding(vertical = 6.dp)
                     )
 
-                    CanvasBackground.values().forEach { bg ->
-                        val isSelected = bg == currentBackground
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(10.dp))
-                                .background(if (isSelected) Color(0xFFE2E8F0) else Color.Transparent)
-                                .clickable { onBackgroundSelected(bg) }
-                                .padding(horizontal = 12.dp, vertical = 8.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(18.dp)
-                                        .clip(CircleShape)
-                                        .background(Color(bg.bgColor))
-                                        .border(1.dp, Color(0xFFCBD5E1), CircleShape)
-                                )
-                                Spacer(modifier = Modifier.width(10.dp))
-                                Text(
-                                    text = bg.displayName,
-                                    fontSize = 13.sp,
-                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                            }
-                            if (isSelected) {
-                                Icon(
-                                    imageVector = Icons.Default.Check,
-                                    contentDescription = "Selected",
-                                    tint = Color(0xFF0284C7),
-                                    modifier = Modifier.size(16.dp)
-                                )
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
+                            .border(
+                                1.dp,
+                                MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f),
+                                RoundedCornerShape(12.dp)
+                            )
+                            .padding(6.dp)
+                    ) {
+                        CanvasBackground.values().forEach { bg ->
+                            val isSelected = bg == currentBackground
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .background(
+                                        if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f)
+                                        else Color.Transparent
+                                    )
+                                    .clickable { onBackgroundSelected(bg) }
+                                    .padding(horizontal = 10.dp, vertical = 7.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(20.dp)
+                                            .clip(CircleShape)
+                                            .background(Color(bg.bgColor))
+                                            .border(1.dp, MaterialTheme.colorScheme.outline, CircleShape)
+                                    )
+                                    Spacer(modifier = Modifier.width(10.dp))
+                                    Text(
+                                        text = bg.displayName,
+                                        fontSize = 13.sp,
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                }
+                                if (isSelected) {
+                                    Icon(
+                                        imageVector = Icons.Default.Check,
+                                        contentDescription = "Selected",
+                                        tint = Color(0xFF38BDF8),
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
                             }
                         }
                     }
@@ -380,6 +410,7 @@ fun FileDrawer(
                     DrawerActionRow(
                         icon = Icons.Default.HelpOutline,
                         label = "Gestures & Help Guide",
+                        iconTint = Color(0xFFF59E0B),
                         onClick = onHelpClick,
                         testTag = "drawer_action_help"
                     )
@@ -394,6 +425,7 @@ fun FileDrawer(
 private fun DrawerActionRow(
     icon: ImageVector,
     label: String,
+    iconTint: Color = Color(0xFF0284C7),
     onClick: () -> Unit,
     testTag: String
 ) {
@@ -402,21 +434,21 @@ private fun DrawerActionRow(
             .fillMaxWidth()
             .clip(RoundedCornerShape(10.dp))
             .clickable(onClick = onClick)
-            .padding(horizontal = 12.dp, vertical = 9.dp)
+            .padding(horizontal = 12.dp, vertical = 10.dp)
             .testTag(testTag),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(
             imageVector = icon,
             contentDescription = label,
-            tint = Color(0xFF38BDF8),
+            tint = iconTint,
             modifier = Modifier.size(20.dp)
         )
         Spacer(modifier = Modifier.width(12.dp))
         Text(
             text = label,
             fontSize = 13.sp,
-            fontWeight = FontWeight.Medium,
+            fontWeight = FontWeight.SemiBold,
             color = MaterialTheme.colorScheme.onSurface
         )
     }
@@ -433,53 +465,47 @@ private fun ProjectFileItem(
     onInfo: () -> Unit
 ) {
     var menuExpanded by remember { mutableStateOf(false) }
-    val dateFormat = remember { SimpleDateFormat("MMM d, yyyy · HH:mm", Locale.getDefault()) }
+    val dateFormat = remember { SimpleDateFormat("MMM d, yyyy", Locale.getDefault()) }
 
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
-            .background(if (isCurrent) Color(0xFFEFF6FF) else Color.White)
+            .background(
+                if (isCurrent) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f)
+                else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+            )
             .border(
-                width = 1.dp,
-                color = if (isCurrent) Color(0xFF38BDF8) else Color(0xFFE2E8F0),
+                width = if (isCurrent) 1.5.dp else 1.dp,
+                color = if (isCurrent) Color(0xFF38BDF8) else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f),
                 shape = RoundedCornerShape(12.dp)
             )
             .clickable(onClick = onOpen)
-            .padding(10.dp)
+            .padding(horizontal = 12.dp, vertical = 10.dp)
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
+            horizontalArrangement = Arrangement.SpaceBetween,
+            modifier = Modifier.fillMaxWidth()
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.weight(1f)
             ) {
-                // Thumbnail preview
+                // Icon
                 Box(
                     modifier = Modifier
-                        .size(46.dp)
+                        .size(34.dp)
                         .clip(RoundedCornerShape(8.dp))
-                        .background(Color(0xFFF1F5F9))
-                        .border(0.5.dp, Color(0xFFCBD5E1), RoundedCornerShape(8.dp)),
+                        .background(if (isCurrent) Color(0xFF0284C7) else Color(0xFF08090E)),
                     contentAlignment = Alignment.Center
                 ) {
-                    if (meta.thumbnailBitmap != null && !meta.thumbnailBitmap.isRecycled) {
-                        Image(
-                            bitmap = meta.thumbnailBitmap.asImageBitmap(),
-                            contentDescription = meta.name,
-                            modifier = Modifier.size(46.dp)
-                        )
-                    } else {
-                        Icon(
-                            imageVector = Icons.Default.Edit,
-                            contentDescription = "Drawing",
-                            tint = Color(0xFF94A3B8),
-                            modifier = Modifier.size(22.dp)
-                        )
-                    }
+                    Icon(
+                        imageVector = Icons.Default.Folder,
+                        contentDescription = null,
+                        tint = if (isCurrent) Color.White else Color(0xFF38BDF8),
+                        modifier = Modifier.size(20.dp)
+                    )
                 }
 
                 Spacer(modifier = Modifier.width(10.dp))
@@ -520,7 +546,7 @@ private fun ProjectFileItem(
                     Icon(
                         imageVector = Icons.Default.MoreVert,
                         contentDescription = "File Options",
-                        tint = Color(0xFF64748B),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(18.dp)
                     )
                 }
@@ -536,11 +562,11 @@ private fun ProjectFileItem(
                     )
                     DropdownMenuItem(
                         text = { Text("Rename") },
-                        leadingIcon = { Icon(Icons.Default.DriveFileRenameOutline, contentDescription = null) },
+                        leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null) },
                         onClick = { menuExpanded = false; onRename() }
                     )
                     DropdownMenuItem(
-                        text = { Text("Share .idraw") },
+                        text = { Text("Share Project") },
                         leadingIcon = { Icon(Icons.Default.Share, contentDescription = null) },
                         onClick = { menuExpanded = false; onShare() }
                     )
@@ -549,6 +575,7 @@ private fun ProjectFileItem(
                         leadingIcon = { Icon(Icons.Default.Info, contentDescription = null) },
                         onClick = { menuExpanded = false; onInfo() }
                     )
+                    HorizontalDivider()
                     DropdownMenuItem(
                         text = { Text("Delete", color = Color(0xFFEF4444)) },
                         leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null, tint = Color(0xFFEF4444)) },

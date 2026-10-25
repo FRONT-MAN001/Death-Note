@@ -213,7 +213,8 @@ fun MainDrawingScreen(
                 currentProjectName = project.name,
                 currentBackground = project.background,
                 onBrowseFolderClick = {
-                    folderPickerLauncher.launch(null)
+                    viewModel.refreshFileList()
+                    Toast.makeText(context, "Projects refreshed from internal storage", Toast.LENGTH_SHORT).show()
                 },
                 onNewDrawingClick = {
                     scope.launch { drawerState.close() }
