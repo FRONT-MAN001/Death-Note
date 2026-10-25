@@ -132,6 +132,7 @@ class DrawingViewModel(application: Application) : AndroidViewModel(application)
     val showAutosaveRecoveryDialog = MutableStateFlow(false)
     val showHelpDialog = MutableStateFlow(false)
     val toastMessage = MutableStateFlow<String?>(null)
+    val triggerSaveLocationPicker = MutableStateFlow<String?>(null)
 
     init {
         refreshFileList()
@@ -708,30 +709,50 @@ class DrawingViewModel(application: Application) : AndroidViewModel(application)
         toastMessage.value = "Created new drawing"
     }
 
+    fun promptSaveAsPicker(customName: String? = null) {
+        val baseName = customName?.trim()?.removeSuffix(SafStorageManager.EXTENSION_IDRAW)
+            ?: _project.value.name.removeSuffix(SafStorageManager.EXTENSION_IDRAW)
+        val validName = if (baseName.isBlank()) "Drawing" else baseName
+        triggerSaveLocationPicker.value = "$validName${SafStorageManager.EXTENSION_IDRAW}"
+    }
+
     fun saveCurrentProject(thumbnail: Bitmap?) {
         val existing = _currentFileUri.value
         if (existing == null) {
-            // New project requires filename
-            showSaveAsDialog.value = true
+            // New drawing has no chosen location on internal storage yet. Prompt user where to save!
+            promptSaveAsPicker()
         } else {
-            viewModelScope.launch(Dispatchers.IO) {
-                try {
-                    val savedProject = _project.value.copy(
-                        transform = _transform.value,
-                        modifiedTime = System.currentTimeMillis()
-                    )
-                    storageManager.saveProject(savedProject, existing, savedProject.name, thumbnail)
-                    withContext(Dispatchers.Main) {
-                        _project.value = savedProject
+            saveProjectToUri(existing, thumbnail)
+        }
+    }
+
+    fun saveProjectToUri(uri: Uri, thumbnail: Bitmap?) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val displayName = storageManager.getUriDisplayName(uri)
+                val cleanName = displayName.removeSuffix(SafStorageManager.EXTENSION_IDRAW)
+                val updated = _project.value.copy(
+                    name = cleanName,
+                    transform = _transform.value,
+                    modifiedTime = System.currentTimeMillis()
+                )
+                val success = storageManager.saveProjectToUri(updated, uri, thumbnail)
+                withContext(Dispatchers.Main) {
+                    if (success) {
+                        _project.value = updated
+                        _currentFileUri.value = uri
                         _hasUnsavedChanges.value = false
                         storageManager.discardAutosave()
-                        toastMessage.value = "Saved: ${savedProject.name}.idraw"
+                        showSaveAsDialog.value = false
+                        toastMessage.value = "Saved successfully: $cleanName${SafStorageManager.EXTENSION_IDRAW}"
                         refreshFileList()
+                    } else {
+                        toastMessage.value = "Failed to save file to chosen location"
                     }
-                } catch (e: Exception) {
-                    withContext(Dispatchers.Main) {
-                        toastMessage.value = "Failed to save: ${e.message}"
-                    }
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    toastMessage.value = "Save error: ${e.message}"
                 }
             }
         }
@@ -743,30 +764,8 @@ class DrawingViewModel(application: Application) : AndroidViewModel(application)
             toastMessage.value = "Please enter a valid filename"
             return
         }
-
-        viewModelScope.launch(Dispatchers.IO) {
-            try {
-                val updated = _project.value.copy(
-                    name = cleanName,
-                    transform = _transform.value,
-                    modifiedTime = System.currentTimeMillis()
-                )
-                val newUri = storageManager.saveProject(updated, null, cleanName, thumbnail)
-                withContext(Dispatchers.Main) {
-                    _project.value = updated
-                    _currentFileUri.value = newUri
-                    _hasUnsavedChanges.value = false
-                    storageManager.discardAutosave()
-                    showSaveAsDialog.value = false
-                    toastMessage.value = "Saved project: $cleanName.idraw"
-                    refreshFileList()
-                }
-            } catch (e: Exception) {
-                withContext(Dispatchers.Main) {
-                    toastMessage.value = "Failed to save: ${e.message}"
-                }
-            }
-        }
+        showSaveAsDialog.value = false
+        promptSaveAsPicker(cleanName)
     }
 
     fun openProject(uri: Uri) {
@@ -860,6 +859,27 @@ class DrawingViewModel(application: Application) : AndroidViewModel(application)
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
                     toastMessage.value = "Failed to export PDF: ${e.message}"
+                }
+            }
+        }
+    }
+
+    fun exportPdfToUri(uri: Uri, scope: PdfExporter.ExportScope, viewW: Float, viewH: Float) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val displayName = storageManager.getUriDisplayName(uri)
+                val success = storageManager.exportPdfToUri(_project.value, uri, scope, viewW, viewH)
+                withContext(Dispatchers.Main) {
+                    showPdfExportDialog.value = false
+                    if (success) {
+                        toastMessage.value = "PDF saved successfully: $displayName"
+                    } else {
+                        toastMessage.value = "Failed to export PDF to chosen location"
+                    }
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    toastMessage.value = "PDF Export error: ${e.message}"
                 }
             }
         }

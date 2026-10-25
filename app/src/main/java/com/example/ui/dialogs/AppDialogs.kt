@@ -90,7 +90,7 @@ fun SaveAsDialog(
         text = {
             Column {
                 Text(
-                    text = "Enter a name for your drawing. It will be saved as an editable .idraw file.",
+                    text = "Enter a name for your drawing. Next, you will select the destination folder on internal storage to save this .idraw file.",
                     fontSize = 13.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -111,7 +111,7 @@ fun SaveAsDialog(
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0284C7)),
                 modifier = Modifier.testTag("confirm_save_button")
             ) {
-                Text("Save")
+                Text("Choose Location & Save")
             }
         },
         dismissButton = {
@@ -306,7 +306,7 @@ fun PdfExportDialog(
         text = {
             Column {
                 Text(
-                    text = "Export your infinite canvas drawing to a high-resolution vector PDF document.",
+                    text = "Export your infinite canvas drawing to a high-resolution vector PDF document. Next, you will select the destination folder on internal storage to save the PDF.",
                     fontSize = 13.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -379,7 +379,7 @@ fun PdfExportDialog(
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0284C7)),
                 modifier = Modifier.testTag("confirm_pdf_export_button")
             ) {
-                Text("Export & Save")
+                Text("Choose Location & Export")
             }
         },
         dismissButton = {

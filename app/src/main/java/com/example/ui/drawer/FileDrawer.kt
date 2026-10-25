@@ -75,6 +75,8 @@ fun FileDrawer(
     activeFolderName: String,
     projectFiles: List<ProjectMetadata>,
     currentBackground: CanvasBackground,
+    currentFileUri: Uri? = null,
+    currentFileDisplayName: String? = null,
     onNewDrawingClick: () -> Unit,
     onBrowseFolderClick: () -> Unit,
     onOpenFilePickerClick: () -> Unit,
@@ -201,14 +203,20 @@ fun FileDrawer(
                                 Spacer(modifier = Modifier.width(10.dp))
                                 Column {
                                     Text(
-                                        text = "Internal Storage / Drawings",
+                                        text = if (currentFileUri != null)
+                                            (currentFileDisplayName ?: "Internal Storage (Chosen Folder)")
+                                        else
+                                            "Unsaved Drawing",
                                         style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
                                         color = MaterialTheme.colorScheme.onSurface,
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis
                                     )
                                     Text(
-                                        text = "${projectFiles.size} .idraw projects • Device storage",
+                                        text = if (currentFileUri != null)
+                                            "${projectFiles.size} project(s) saved • Tap Save As to change folder"
+                                        else
+                                            "Tap Save to choose storage folder on your device",
                                         fontSize = 11.sp,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )

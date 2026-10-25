@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
 import android.net.Uri
+import android.provider.OpenableColumns
 import androidx.core.content.FileProvider
 import androidx.documentfile.provider.DocumentFile
 import com.example.model.DrawProject
@@ -13,9 +14,10 @@ import java.io.FileInputStream
 import java.io.FileOutputStream
 
 /**
- * Handles device internal/external storage project management for Death Note,
+ * Handles device storage project management for Death Note,
  * custom .idraw file persistence, PDF export, and crash recovery autosave.
- * Uses direct app storage without requiring problematic SAF folder permission trees.
+ * Supports user-selected internal storage locations (Downloads, Documents, etc.)
+ * via Storage Access Framework with persistable permissions.
  */
 class SafStorageManager(private val context: Context) {
 
@@ -26,6 +28,7 @@ class SafStorageManager(private val context: Context) {
         const val MIME_IDRAW = "application/octet-stream"
         const val MIME_PDF = "application/pdf"
         private const val AUTOSAVE_FILE = "autosave_recovery.idraw"
+        private const val PREF_TRACKED_URIS = "tracked_project_uris"
     }
 
     /**
@@ -50,7 +53,7 @@ class SafStorageManager(private val context: Context) {
      * Returns a human-friendly name for the working storage location.
      */
     fun getActiveFolderName(): String {
-        return "Internal Storage / Drawings"
+        return "Internal Storage"
     }
 
     /**
@@ -59,46 +62,161 @@ class SafStorageManager(private val context: Context) {
     fun getActiveFolderUri(): Uri? = null
 
     fun setActiveFolderUri(uri: Uri) {
-        // No-op: Internal storage is used directly
+        addTrackedUri(uri)
     }
 
     /**
-     * List all .idraw project files stored in device storage.
+     * Resolves the human-readable display name of a file from its Uri.
+     */
+    fun getUriDisplayName(uri: Uri): String {
+        if (uri.scheme == "file") {
+            return File(uri.path ?: "").name
+        }
+        var name: String? = null
+        try {
+            context.contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { cursor ->
+                if (cursor.moveToFirst()) {
+                    val idx = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+                    if (idx != -1) {
+                        name = cursor.getString(idx)
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            // Ignore cursor exceptions
+        }
+        return name ?: uri.lastPathSegment?.substringAfterLast('/') ?: "Drawing$EXTENSION_IDRAW"
+    }
+
+    fun addTrackedUri(uri: Uri) {
+        val current = getTrackedUris().toMutableSet()
+        current.add(uri.toString())
+        prefs.edit().putStringSet(PREF_TRACKED_URIS, current).apply()
+    }
+
+    fun removeTrackedUri(uri: Uri) {
+        val current = getTrackedUris().toMutableSet()
+        current.remove(uri.toString())
+        prefs.edit().putStringSet(PREF_TRACKED_URIS, current).apply()
+    }
+
+    fun getTrackedUris(): Set<String> {
+        return prefs.getStringSet(PREF_TRACKED_URIS, emptySet()) ?: emptySet()
+    }
+
+    /**
+     * List all .idraw project files stored in device storage or chosen via SAF.
      */
     fun listProjectFiles(): List<ProjectMetadata> {
         val result = mutableListOf<ProjectMetadata>()
+        val seenUris = mutableSetOf<String>()
+
+        // 1. Check all user-chosen project URIs on internal storage
+        for (uriStr in getTrackedUris()) {
+            try {
+                val uri = Uri.parse(uriStr)
+                val doc = DocumentFile.fromSingleUri(context, uri)
+                if (doc != null && !doc.exists()) {
+                    removeTrackedUri(uri)
+                    continue
+                }
+
+                val displayName = getUriDisplayName(uri)
+                val cleanName = displayName.removeSuffix(EXTENSION_IDRAW)
+                var size = if (doc != null && doc.length() > 0) doc.length() else 0L
+                var modified = if (doc != null && doc.lastModified() > 0) doc.lastModified() else System.currentTimeMillis()
+
+                var thumb: Bitmap? = null
+                try {
+                    context.contentResolver.openInputStream(uri)?.use { stream ->
+                        thumb = ProjectSerializer.extractThumbnail(stream)
+                    }
+                } catch (e: Exception) {
+                    // Ignore corrupted thumbnails
+                }
+
+                result.add(
+                    ProjectMetadata(
+                        id = uriStr,
+                        name = cleanName,
+                        uriString = uriStr,
+                        modifiedTime = modified,
+                        sizeBytes = size,
+                        thumbnailBitmap = thumb
+                    )
+                )
+                seenUris.add(uriStr)
+            } catch (e: Exception) {
+                // Ignore invalid URIs
+            }
+        }
+
+        // 2. Also check fallback internal folder files
         val internalDir = getInternalProjectsDir()
         val files = internalDir.listFiles { f ->
             f.isFile && f.name.endsWith(EXTENSION_IDRAW, ignoreCase = true) && !f.name.startsWith(".")
         } ?: emptyArray()
 
         for (f in files) {
-            val cleanName = f.name.removeSuffix(EXTENSION_IDRAW)
-            var thumb: Bitmap? = null
-            try {
-                FileInputStream(f).use { stream ->
-                    thumb = ProjectSerializer.extractThumbnail(stream)
+            val fUri = Uri.fromFile(f).toString()
+            if (!seenUris.contains(fUri)) {
+                val cleanName = f.name.removeSuffix(EXTENSION_IDRAW)
+                var thumb: Bitmap? = null
+                try {
+                    FileInputStream(f).use { stream ->
+                        thumb = ProjectSerializer.extractThumbnail(stream)
+                    }
+                } catch (e: Exception) {
+                    // Ignore corrupted thumbnails
                 }
-            } catch (e: Exception) {
-                // Ignore corrupted thumbnails
-            }
-            result.add(
-                ProjectMetadata(
-                    id = f.absolutePath,
-                    name = cleanName,
-                    uriString = Uri.fromFile(f).toString(),
-                    modifiedTime = f.lastModified(),
-                    sizeBytes = f.length(),
-                    thumbnailBitmap = thumb
+                result.add(
+                    ProjectMetadata(
+                        id = f.absolutePath,
+                        name = cleanName,
+                        uriString = fUri,
+                        modifiedTime = f.lastModified(),
+                        sizeBytes = f.length(),
+                        thumbnailBitmap = thumb
+                    )
                 )
-            )
+            }
         }
 
         return result.sortedByDescending { it.modifiedTime }
     }
 
     /**
-     * Saves a project directly to device internal storage.
+     * Saves a project directly to a user-chosen URI via SAF.
+     */
+    fun saveProjectToUri(
+        project: DrawProject,
+        uri: Uri,
+        thumbnailBitmap: Bitmap? = null
+    ): Boolean {
+        return try {
+            try {
+                context.contentResolver.takePersistableUriPermission(
+                    uri,
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                )
+            } catch (e: Exception) {
+                // Not all providers support persistable permissions; write may still succeed
+            }
+
+            val stream = context.contentResolver.openOutputStream(uri, "wt") ?: return false
+            stream.use { out ->
+                ProjectSerializer.serialize(project, out, thumbnailBitmap)
+            }
+            addTrackedUri(uri)
+            true
+        } catch (e: Exception) {
+            e.printStackTrace()
+            false
+        }
+    }
+
+    /**
+     * Saves a project directly to device internal storage (fallback).
      */
     fun saveProject(
         project: DrawProject,
@@ -113,14 +231,8 @@ class SafStorageManager(private val context: Context) {
         }
 
         if (existingUri != null && existingUri.scheme == "content") {
-            try {
-                context.contentResolver.openOutputStream(existingUri, "wt")?.use { out ->
-                    ProjectSerializer.serialize(project, out, thumbnailBitmap)
-                }
-                return existingUri
-            } catch (e: Exception) {
-                // Fall back to saving in internal storage below
-            }
+            val ok = saveProjectToUri(project, existingUri, thumbnailBitmap)
+            if (ok) return existingUri
         }
 
         val dir = getInternalProjectsDir()
@@ -128,7 +240,9 @@ class SafStorageManager(private val context: Context) {
         FileOutputStream(targetFile).use { out ->
             ProjectSerializer.serialize(project, out, thumbnailBitmap)
         }
-        return Uri.fromFile(targetFile)
+        val fileUri = Uri.fromFile(targetFile)
+        addTrackedUri(fileUri)
+        return fileUri
     }
 
     /**
@@ -141,6 +255,7 @@ class SafStorageManager(private val context: Context) {
             context.contentResolver.openInputStream(uri)
                 ?: throw IllegalStateException("Cannot open input stream for $uri")
         }
+        addTrackedUri(uri)
         return stream.use { ProjectSerializer.deserialize(it) }
     }
 
@@ -157,10 +272,17 @@ class SafStorageManager(private val context: Context) {
         return if (uri.scheme == "file") {
             val file = File(uri.path!!)
             val newFile = File(file.parentFile, cleanName)
-            if (file.renameTo(newFile)) Uri.fromFile(newFile) else null
+            if (file.renameTo(newFile)) {
+                removeTrackedUri(uri)
+                val newUri = Uri.fromFile(newFile)
+                addTrackedUri(newUri)
+                newUri
+            } else null
         } else {
             val doc = DocumentFile.fromSingleUri(context, uri)
             if (doc != null && doc.renameTo(cleanName)) {
+                removeTrackedUri(uri)
+                addTrackedUri(doc.uri)
                 doc.uri
             } else null
         }
@@ -170,11 +292,34 @@ class SafStorageManager(private val context: Context) {
      * Delete a project file.
      */
     fun deleteProject(uri: Uri): Boolean {
+        removeTrackedUri(uri)
         return if (uri.scheme == "file") {
             File(uri.path!!).delete()
         } else {
             val doc = DocumentFile.fromSingleUri(context, uri)
             doc?.delete() ?: false
+        }
+    }
+
+    /**
+     * Export drawing to PDF directly to a user-chosen destination Uri.
+     */
+    fun exportPdfToUri(
+        project: DrawProject,
+        uri: Uri,
+        scope: PdfExporter.ExportScope,
+        viewW: Float,
+        viewH: Float
+    ): Boolean {
+        return try {
+            val stream = context.contentResolver.openOutputStream(uri, "wt") ?: return false
+            stream.use { out ->
+                PdfExporter.exportToPdf(project, out, scope, viewW, viewH)
+            }
+            true
+        } catch (e: Exception) {
+            e.printStackTrace()
+            false
         }
     }
 

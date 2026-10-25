@@ -99,10 +99,16 @@ fun MainDrawingScreen(
     val selectedImage by viewModel.selectedImage.collectAsState()
     val activeFolderName by viewModel.activeFolderName.collectAsState()
     val projectFiles by viewModel.projectFiles.collectAsState()
+    val currentFileUri by viewModel.currentFileUri.collectAsState()
+    val triggerSaveLocationPicker by viewModel.triggerSaveLocationPicker.collectAsState()
     val hasUnsavedChanges by viewModel.hasUnsavedChanges.collectAsState()
     val canUndo by viewModel.canUndo.collectAsState()
     val canRedo by viewModel.canRedo.collectAsState()
     val recentColors by viewModel.recentColors.collectAsState()
+
+    val currentFileDisplayName = remember(currentFileUri, project.name) {
+        currentFileUri?.let { viewModel.storageManager.getUriDisplayName(it) } ?: "${project.name}.idraw"
+    }
 
     // Popover visibilities
     var showBrushPopover by remember { mutableStateOf(false) }
@@ -120,6 +126,35 @@ fun MainDrawingScreen(
     val showAutosaveRecoveryDialog by viewModel.showAutosaveRecoveryDialog.collectAsState()
     val showHelpDialog by viewModel.showHelpDialog.collectAsState()
     val toastMessage by viewModel.toastMessage.collectAsState()
+
+    // State for pending PDF export scope when system picker is active
+    var pendingPdfScope by remember { mutableStateOf(PdfExporter.ExportScope.ENTIRE_DRAWING) }
+
+    // System File Creator for .idraw project files (asks user where to save on internal storage)
+    val createDocumentLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument(com.example.storage.SafStorageManager.MIME_IDRAW)
+    ) { uri: Uri? ->
+        if (uri != null) {
+            val thumb = ThumbnailGenerator.generateThumbnail(project)
+            viewModel.saveProjectToUri(uri, thumb)
+        }
+    }
+
+    // System File Creator for PDF export (asks user where to save on internal storage)
+    val createPdfLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument(com.example.storage.SafStorageManager.MIME_PDF)
+    ) { uri: Uri? ->
+        if (uri != null) {
+            viewModel.exportPdfToUri(uri, pendingPdfScope, 1080f, 1920f)
+        }
+    }
+
+    LaunchedEffect(triggerSaveLocationPicker) {
+        triggerSaveLocationPicker?.let { fileName ->
+            createDocumentLauncher.launch(fileName)
+            viewModel.triggerSaveLocationPicker.value = null
+        }
+    }
 
     LaunchedEffect(toastMessage) {
         toastMessage?.let {
@@ -212,6 +247,8 @@ fun MainDrawingScreen(
                 projectFiles = projectFiles,
                 currentProjectName = project.name,
                 currentBackground = project.background,
+                currentFileUri = currentFileUri,
+                currentFileDisplayName = currentFileDisplayName,
                 onBrowseFolderClick = {
                     viewModel.refreshFileList()
                     Toast.makeText(context, "Projects refreshed from internal storage", Toast.LENGTH_SHORT).show()
@@ -230,7 +267,7 @@ fun MainDrawingScreen(
                     scope.launch { drawerState.close() }
                 },
                 onSaveAsClick = {
-                    viewModel.showSaveAsDialog.value = true
+                    viewModel.promptSaveAsPicker()
                     scope.launch { drawerState.close() }
                 },
                 onExportPdfClick = {
@@ -556,7 +593,10 @@ fun MainDrawingScreen(
         PdfExportDialog(
             projectName = project.name,
             onExportSave = { fileName, scope ->
-                viewModel.exportPdf(fileName, scope, 1080f, 1920f)
+                pendingPdfScope = scope
+                viewModel.showPdfExportDialog.value = false
+                val targetName = if (fileName.endsWith(".pdf", ignoreCase = true)) fileName else "$fileName.pdf"
+                createPdfLauncher.launch(targetName)
             },
             onSharePdf = {
                 val intent = viewModel.storageManager.createSharePdfIntent(project, 1080f, 1920f)
