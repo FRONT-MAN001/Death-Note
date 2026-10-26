@@ -41,4 +41,15 @@ class ExampleRobolectricTest {
     viewModel.commitStroke(stroke)
     assertEquals(1, viewModel.project.value.strokes.size)
   }
+
+  @Test
+  fun `test about screen state toggle`() {
+    val app = ApplicationProvider.getApplicationContext<Application>()
+    val viewModel = DrawingViewModel(app)
+    assertEquals(false, viewModel.showAboutScreen.value)
+    viewModel.showAboutScreen.value = true
+    assertEquals(true, viewModel.showAboutScreen.value)
+    viewModel.showAboutScreen.value = false
+    assertEquals(false, viewModel.showAboutScreen.value)
+  }
 }

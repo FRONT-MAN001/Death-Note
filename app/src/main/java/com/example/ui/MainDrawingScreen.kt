@@ -56,6 +56,7 @@ import com.example.ui.components.GlassToolbar
 import com.example.ui.components.SelectionActionsBar
 import com.example.ui.components.ShapePopover
 import com.example.ui.components.TopNavigationBar
+import com.example.ui.dialogs.AboutScreen
 import com.example.ui.dialogs.AutosaveRecoveryDialog
 import com.example.ui.dialogs.DeleteConfirmDialog
 import com.example.ui.dialogs.FileInfoDialog
@@ -125,6 +126,7 @@ fun MainDrawingScreen(
     val showPdfExportDialog by viewModel.showPdfExportDialog.collectAsState()
     val showAutosaveRecoveryDialog by viewModel.showAutosaveRecoveryDialog.collectAsState()
     val showHelpDialog by viewModel.showHelpDialog.collectAsState()
+    val showAboutScreen by viewModel.showAboutScreen.collectAsState()
     val toastMessage by viewModel.toastMessage.collectAsState()
 
     // State for pending PDF export scope when system picker is active
@@ -228,6 +230,7 @@ fun MainDrawingScreen(
     // Handle Back Press gracefully
     BackHandler {
         when {
+            showAboutScreen -> viewModel.showAboutScreen.value = false
             drawerState.isOpen -> scope.launch { drawerState.close() }
             showBrushPopover -> showBrushPopover = false
             showColorPopover -> showColorPopover = false
@@ -305,6 +308,10 @@ fun MainDrawingScreen(
                 },
                 onHelpClick = {
                     viewModel.showHelpDialog.value = true
+                },
+                onAboutClick = {
+                    scope.launch { drawerState.close() }
+                    viewModel.showAboutScreen.value = true
                 },
                 onCloseDrawer = {
                     scope.launch { drawerState.close() }
@@ -626,7 +633,14 @@ fun MainDrawingScreen(
     }
 
     if (showHelpDialog) {
-        HelpDialog(onDismiss = { viewModel.showHelpDialog.value = false })
+        HelpDialog(
+            onDismiss = { viewModel.showHelpDialog.value = false },
+            onOpenAbout = { viewModel.showAboutScreen.value = true }
+        )
+    }
+
+    if (showAboutScreen) {
+        AboutScreen(onBack = { viewModel.showAboutScreen.value = false })
     }
 
     if (showImageManagerDialog) {

@@ -516,7 +516,10 @@ fun AutosaveRecoveryDialog(
 }
 
 @Composable
-fun HelpDialog(onDismiss: () -> Unit) {
+fun HelpDialog(
+    onDismiss: () -> Unit,
+    onOpenAbout: () -> Unit = {}
+) {
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
@@ -524,7 +527,7 @@ fun HelpDialog(onDismiss: () -> Unit) {
                 Icon(Icons.Default.TouchApp, contentDescription = null, tint = Color(0xFF38BDF8))
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = "Infinite Draw Guide",
+                    text = "Death Note Guide",
                     color = MaterialTheme.colorScheme.onSurface,
                     fontWeight = FontWeight.Bold
                 )
@@ -542,7 +545,7 @@ fun HelpDialog(onDismiss: () -> Unit) {
                 )
                 HelpPoint(
                     title = "2 Fingers = Pan & Pinch Zoom",
-                    desc = "Pinch with two fingers to zoom smoothly into details (centered on your fingers) or pan simultaneously without accidental marks."
+                    desc = "Pinch with two fingers to zoom smoothly into details or pan simultaneously without accidental marks."
                 )
                 HelpPoint(
                     title = "Directional Nudge & Moving",
@@ -554,7 +557,7 @@ fun HelpDialog(onDismiss: () -> Unit) {
                 )
                 HelpPoint(
                     title = "Storage & Custom .idraw Files",
-                    desc = "Projects are stored locally using Android Storage Access Framework (SAF). Full vector stroke data, images, and settings are preserved."
+                    desc = "Projects are stored directly to your chosen folder on internal storage. Full vector stroke data, images, and settings are preserved."
                 )
             }
         },
@@ -564,6 +567,16 @@ fun HelpDialog(onDismiss: () -> Unit) {
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0284C7))
             ) {
                 Text("Got It")
+            }
+        },
+        dismissButton = {
+            TextButton(
+                onClick = {
+                    onDismiss()
+                    onOpenAbout()
+                }
+            ) {
+                Text("About the Developer", color = Color(0xFF38BDF8))
             }
         }
     )

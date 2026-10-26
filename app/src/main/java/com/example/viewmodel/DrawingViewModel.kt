@@ -131,6 +131,7 @@ class DrawingViewModel(application: Application) : AndroidViewModel(application)
     val showPdfExportDialog = MutableStateFlow(false)
     val showAutosaveRecoveryDialog = MutableStateFlow(false)
     val showHelpDialog = MutableStateFlow(false)
+    val showAboutScreen = MutableStateFlow(false)
     val toastMessage = MutableStateFlow<String?>(null)
     val triggerSaveLocationPicker = MutableStateFlow<String?>(null)
 

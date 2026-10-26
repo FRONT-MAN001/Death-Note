@@ -91,6 +91,7 @@ fun FileDrawer(
     onFileInfoClick: (ProjectMetadata) -> Unit,
     onBackgroundSelected: (CanvasBackground) -> Unit,
     onHelpClick: () -> Unit,
+    onAboutClick: () -> Unit,
     onCloseDrawer: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -412,7 +413,7 @@ fun FileDrawer(
                     }
                 }
 
-                // Section: App Help
+                // Section: App Help & About
                 item {
                     Spacer(modifier = Modifier.height(14.dp))
                     DrawerActionRow(
@@ -421,6 +422,14 @@ fun FileDrawer(
                         iconTint = Color(0xFFF59E0B),
                         onClick = onHelpClick,
                         testTag = "drawer_action_help"
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    DrawerActionRow(
+                        icon = Icons.Default.Info,
+                        label = "About the Developer",
+                        iconTint = Color(0xFF38BDF8),
+                        onClick = onAboutClick,
+                        testTag = "drawer_action_about"
                     )
                     Spacer(modifier = Modifier.height(18.dp))
                 }
