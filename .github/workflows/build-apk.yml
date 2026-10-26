@@ -16,7 +16,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Set up JDK 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: 'temurin'
           java-version: '17'
@@ -50,7 +50,7 @@ jobs:
             export ALIAS="androiddebugkey"
             export KEY_PASSWORD="android"
           fi
-          ./gradlew assembleRelease
+          ./gradlew assembleRelease --no-daemon
 
       - name: Upload Release APK Artifact
         uses: actions/upload-artifact@v4
